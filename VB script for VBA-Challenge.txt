@@ -1,0 +1,121 @@
+'Code help from the following websites
+'https://docs.microsoft.com/en-us/office/vba/api/excel
+'https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint
+
+Sub HmWrk():
+'Dimension variables used
+Dim lrow, lcol, vol, gvol, r, c, wscount, rrow As Integer
+Dim OPrice, CPrice, pct, gpct, lpct As Double
+Dim tic, tic1, gtic, ltic, gvtic As String
+
+    'Get number of worksheets in the workbook
+    wscount = Application.Sheets.Count
+    
+    'Loop through all worksheets
+    For ws = 1 To wscount
+        Sheets(ws).Activate
+        'Last row
+        With ActiveSheet
+            lrow = .Cells(.Rows.Count, "A").End(xlUp).Row
+        End With
+        
+        'Last column
+        With ActiveSheet
+            lcol = .Cells(1, Columns.Count).End(xlToLeft).Column
+            'MsgBox lcol
+        End With
+        
+        ' write summary headers to worksheet. Using last column plus 1 for initial column location
+        Cells(1, (lcol + 1) + 1).Value = "Ticker"
+        Cells(1, (lcol + 1) + 2).Value = "Yearly Change"
+        Cells(1, (lcol + 1) + 3).Value = "Percent Change"
+        Cells(1, (lcol + 1) + 4).Value = "Total Stock Volume"
+                   
+        'Bonus
+        'add labels for greatest increase, decrease and vol for each year. Using last column plus 6 for initial column location
+        Cells(2, (lcol + 6) + 1).Value = "Greatest % increase"
+        Cells(3, (lcol + 6) + 1).Value = "Greatest % decrease"
+        Cells(4, (lcol + 6) + 1).Value = "Greatest total volume"
+        Cells(1, (lcol + 6) + 2).Value = "Ticker"
+        Cells(1, (lcol + 6) + 3).Value = "Value"
+                
+        'Initialize variables
+        lpct = 0
+        gpct = 0
+        tic1 = Cells(2, 1).Value
+        OPrice = Cells(2, 3).Value
+            
+        ' loop through rows. Clear variables when there is a change in column A value
+        For r = 2 To lrow
+            ' collect volumn for current ticker value
+            vol = vol + Cells(r, 7).Value
+            If Cells(r, 1).Value <> Cells(r + 1, 1).Value Then
+                CPrice = Cells(r, 6).Value
+                ' get last row summary data was added in columns I through J
+                With ActiveSheet
+                    rrow = .Cells(.Rows.Count, "I").End(xlUp).Row
+                End With
+                ' write summary date to summary region
+                Cells(rrow + 1, (lcol + 1) + 1).Value = tic1
+                Cells(rrow + 1, (lcol + 1) + 2).Value = (CPrice - OPrice)
+                'validate closing price > 0 to prevent devide by 0 error
+                If CPrice = 0 Then
+                    pct = 0
+                Else
+                    pct = Round(1 - (OPrice / CPrice), 4)
+                End If
+                'change color background base on value above or below zero.  Above zero = green and below zero = red
+                If (CPrice - OPrice) < 0 Then
+                    Cells(rrow + 1, 8 + 2).Interior.Color = vbRed
+                Else
+                    Cells(rrow + 1, 8 + 2).Interior.Color = vbGreen
+                End If
+                Cells(rrow + 1, 8 + 3).Value = pct
+                Cells(rrow + 1, 8 + 4).Value = vol
+                If pct > gpct Then
+                    gtic = tic1
+                    gpct = pct
+                ElseIf pct < 0 And pct < lpct Then
+                    ltic = tic1
+                    lpct = pct
+                End If
+                If vol > gvol Then
+                    gvtic = tic1
+                    gvol = vol
+                End If
+                'Worksheets("Results").Columns("A:D").AutoFit
+                Sheets(ws).Activate
+                'Bonus
+                'add greatest increase, decrease and vol for sheet
+                'Range("I2").Value = "Greatest % increase"
+                Cells(2, 14 + 1).Value = gtic
+                Cells(2, 15 + 1).Value = gpct
+                Cells(3, 14 + 1).Value = ltic
+                Cells(3, 15 + 1).Value = lpct
+                'Format cells gpct and lpct to percentage
+                Cells(2, 15 + 1).NumberFormat = "0.00%"
+                Cells(3, 15 + 1).NumberFormat = "0.00%"
+                Cells(4, 14 + 1).Value = gvtic
+                Cells(4, 15 + 1).Value = gvol
+                Cells(rrow + 1, 8 + 3).NumberFormat = "0.00%"
+                'record new ticker value for comparision and opening price
+                tic1 = Cells(r + 1, 1).Value
+                OPrice = Cells(r + 1, 3).Value
+                vol = 0
+    
+            End If
+            
+        Next r
+        'adjust column width
+        Sheets(ws).Columns("I:P").AutoFit
+        ' reset greatest values for next sheet
+        gtic = ""
+        gpct = 0
+        ltic = ""
+        lpct = 0
+        gvtic = ""
+        gvol = 0
+        
+    Next ws
+
+End Sub
